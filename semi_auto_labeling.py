@@ -129,3 +129,46 @@ def annotate_lighting_condition(id_folder_path, id_folder):
         return lighting_annotations
     else:
         return []
+
+
+def annotate_resolution(id_folder_path, id_folder):
+    """
+    Annotates each image in the folder with its resolution ratio (w*h relative to the maximum resolution)
+    and categorizes the resolution level as 'low', 'medium', or 'high' based on quartiles.
+    Also displays a boxplot with swarmplot for visualizing resolution distribution.
+    """
+    resolution_data = []
+    img_paths = []
+
+    for img_name in sorted(os.listdir(id_folder_path)):
+        img_path = os.path.join(id_folder_path, img_name)
+        if os.path.isfile(img_path):
+            img = cv2.imread(img_path)
+            if img is not None:
+                height, width, _ = img.shape
+                resolution = width * height
+                resolution_data.append(resolution)
+                img_paths.append(img_path)
+
+    if resolution_data:
+        max_resolution = max(resolution_data)
+
+        # Calculate quartiles
+        df_resolution = pd.DataFrame(resolution_data, columns=['resolution'])
+        q1_res = df_resolution['resolution'].quantile(0.25)
+        q3_res = df_resolution['resolution'].quantile(0.75)
+
+        # Annotate each image with a resolution level and resolution ratio
+        resolution_annotations = []
+        for img_path, resolution in zip(img_paths, resolution_data):
+            if resolution <= q1_res:
+                resolution_level = 'low'
+            elif q1_res < resolution <= q3_res:
+                resolution_level = 'medium'
+            else:
+                resolution_level = 'high'
+            resolution_ratio = resolution / max_resolution if max_resolution > 0 else 'N/A'
+            resolution_annotations.append((img_path, resolution_ratio, resolution_level))
+        return resolution_annotations
+    else:
+        return []
